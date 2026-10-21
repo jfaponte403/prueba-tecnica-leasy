@@ -9,3 +9,4 @@ dist/
 build/
 client-app/node_modules/
 client-app/dist/
+.idea/
