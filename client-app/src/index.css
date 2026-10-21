@@ -261,3 +261,9 @@ td {
     padding-inline: 16px;
   }
 }
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}

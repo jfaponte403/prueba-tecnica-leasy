@@ -1,10 +1,7 @@
-import type { FormEvent } from 'react'
+import { useLogin } from '../hooks/useLogin.ts'
 
 function LoginPage() {
-  // Pendiente: conectar con el endpoint de login y guardar el token con setToken
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-  }
+  const { values, error, isSubmitting, handleChange, handleSubmit } = useLogin()
 
   return (
     <main className="shell auth-shell">
@@ -17,7 +14,14 @@ function LoginPage() {
         <form className="stack" onSubmit={handleSubmit}>
           <label className="field">
             Correo electrónico
-            <input type="email" name="email" autoComplete="email" required />
+            <input
+              type="email"
+              name="email"
+              autoComplete="email"
+              value={values.email}
+              onChange={handleChange}
+              required
+            />
           </label>
 
           <label className="field">
@@ -27,12 +31,20 @@ function LoginPage() {
               name="password"
               autoComplete="current-password"
               minLength={4}
+              value={values.password}
+              onChange={handleChange}
               required
             />
           </label>
 
-          <button className="btn btn-primary" type="submit">
-            Entrar
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
       </section>
