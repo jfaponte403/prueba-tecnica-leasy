@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useCreateReservation } from '../hooks/useCreateReservation.ts'
+import { useRooms } from '../hooks/useRooms.ts'
 import type { Reservation } from '../services/reservationService.ts'
 
 interface CreateReservationModalProps {
@@ -10,6 +11,7 @@ interface CreateReservationModalProps {
 
 function CreateReservationModal({ isOpen, onClose, onCreated }: CreateReservationModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const { rooms, error: roomsError, isLoading: isLoadingRooms } = useRooms()
   const { values, error, isSubmitting, handleChange, handleSubmit, reset } = useCreateReservation({
     onCreated: (reservation) => {
       onCreated(reservation)
@@ -38,15 +40,34 @@ function CreateReservationModal({ isOpen, onClose, onCreated }: CreateReservatio
         </div>
 
         <label className="field">
-          ID de la sala
-          <input
-            type="text"
+          Sala
+          <select
             name="room_id"
             value={values.room_id}
             onChange={handleChange}
+            disabled={isLoadingRooms || rooms.length === 0}
             required
-          />
+          >
+            <option value="" disabled>
+              {isLoadingRooms ? 'Cargando salas…' : 'Selecciona una sala'}
+            </option>
+            {rooms.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name} · Piso {room.floor} · {room.capacity} personas
+              </option>
+            ))}
+          </select>
         </label>
+
+        {roomsError && (
+          <p className="error" role="alert">
+            {roomsError}
+          </p>
+        )}
+
+        {!isLoadingRooms && !roomsError && rooms.length === 0 && (
+          <p className="muted">No hay salas disponibles.</p>
+        )}
 
         <div className="grid-2">
           <label className="field">

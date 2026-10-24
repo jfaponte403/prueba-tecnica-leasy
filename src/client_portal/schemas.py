@@ -53,6 +53,13 @@ class ClientProfileSchema(BaseModel):
     display_name: str
 
 
+class RoomListItem(BaseModel):
+    id: UUID
+    name: str
+    floor: int
+    capacity: int
+
+
 class ReservationListItem(BaseModel):
     id: UUID
     room_name: str

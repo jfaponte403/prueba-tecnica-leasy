@@ -23,6 +23,11 @@ class ClientPortalAuthService:
         return authenticated.customer_profile
 
 
+class ClientRoomQueryService:
+    def get_rooms(self) -> QuerySet[Room]:
+        return Room.objects.order_by("name")
+
+
 class ClientReservationQueryService:
     def get_customer_reservations(self, *, customer_id) -> QuerySet[Reservation]:
         return Reservation.objects.filter(customer_id=customer_id).select_related("room")

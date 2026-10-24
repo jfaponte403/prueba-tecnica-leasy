@@ -9,6 +9,7 @@ from client_portal.schemas import (
     ProblemDetailSchema,
     ReservationCreateRequest,
     ReservationListItem,
+    RoomListItem,
     TokenResponse,
 )
 from client_portal.security import ClientJWTAuth, ClientTokenService
@@ -16,6 +17,7 @@ from client_portal.services import (
     ClientPortalAuthService,
     ClientReservationCreateService,
     ClientReservationQueryService,
+    ClientRoomQueryService,
 )
 from shared.errors import AppError
 
@@ -24,6 +26,7 @@ client_auth = ClientJWTAuth()
 
 auth_router = Router(tags=["auth"])
 reservation_router = Router(tags=["reservations"])
+room_router = Router(tags=["rooms"])
 
 FAMILY_HTTP = {
     "auth": (401, "Authentication Failed"),
@@ -112,5 +115,20 @@ def create_reservation(request, payload: ReservationCreateRequest):
     )
 
 
+@room_router.get("/", response=list[RoomListItem], auth=client_auth)
+def list_rooms(request):
+    rooms = ClientRoomQueryService().get_rooms()
+    return [
+        RoomListItem(
+            id=room.id,
+            name=room.name,
+            floor=room.floor,
+            capacity=room.capacity,
+        )
+        for room in rooms
+    ]
+
+
 api.add_router("/auth/", auth_router)
 api.add_router("/reservations/", reservation_router)
+api.add_router("/rooms/", room_router)

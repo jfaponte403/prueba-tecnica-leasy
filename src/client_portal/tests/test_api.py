@@ -85,3 +85,29 @@ def test_create_reservation_returns_created_reservation(client):
         "ends_at": "2026-04-20T17:00:00-05:00",
         "cancel_reason": None,
     }
+
+
+@pytest.mark.django_db
+def test_room_list_returns_rooms_ordered_by_name(client):
+    customer = CustomerFactory()
+    room_b = RoomFactory(name="Room B", floor=2, capacity=8)
+    room_a = RoomFactory(name="Room A", floor=1, capacity=4)
+    token = ClientTokenService.issue_access_token(customer=customer)
+
+    response = client.get(
+        "/api/v1/rooms/",
+        HTTP_AUTHORIZATION=f"Bearer {token}",
+    )
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {"id": str(room_a.id), "name": "Room A", "floor": 1, "capacity": 4},
+        {"id": str(room_b.id), "name": "Room B", "floor": 2, "capacity": 8},
+    ]
+
+
+@pytest.mark.django_db
+def test_room_list_requires_authentication(client):
+    response = client.get("/api/v1/rooms/")
+
+    assert response.status_code == 401

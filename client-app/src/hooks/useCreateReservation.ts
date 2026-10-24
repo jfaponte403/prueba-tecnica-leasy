@@ -34,7 +34,7 @@ export function useCreateReservation({ onCreated }: UseCreateReservationOptions 
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
     setValues((prev) => ({ ...prev, [name]: value }))
   }
@@ -59,7 +59,7 @@ export function useCreateReservation({ onCreated }: UseCreateReservationOptions 
     setIsSubmitting(true)
     try {
       const reservation = await reservationService.create({
-        room_id: values.room_id.trim(),
+        room_id: values.room_id,
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
       })
