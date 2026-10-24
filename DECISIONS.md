@@ -37,3 +37,13 @@
    suma infraestructura, reintentos, firma de las peticiones y manejo de entregas
    fallidas, sin resolver lo que se necesita: que la pantalla del cliente se
    actualice al instante.
+
+# Uso de IA
+
+Usé Claude Code como asistente para avanzar más rápido. La IA escribió buena parte de la implementación, pero las decisiones de arquitectura y diseño fueron mías, y revisé todo el código generado antes de integrarlo.En la práctica, el trabajo se repartió así:
+
+- Frontend: Claude escribió los hooks/ y los services/ siguiendo la estructura que yo definí. Por ejemplo, decidí cómo se construye el APIClient y cómo lo consumen los servicios. Claude se encargó de escribir el código a partir de ese diseño.
+- Backend: Claude escribió los servicios y las vistas. La forma de organizarlos, cómo se reparten las responsabilidades entre ellos y cómo se conectan entre sí la decidí yo.
+
+
+
