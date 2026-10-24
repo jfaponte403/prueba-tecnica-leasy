@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from ninja import NinjaAPI, Router
+from ninja.errors import ValidationError
 from ninja.responses import Status
 
 from client_portal.events import RoomOccupancyEventStream
@@ -53,6 +54,19 @@ def handle_app_error(request, exc: AppError):
     return api.create_response(request, problem.model_dump(), status=status)
 
 
+@api.exception_handler(ValidationError)
+def handle_validation_error(request, exc: ValidationError):
+    problem = ProblemDetailSchema.make(
+        request=request,
+        status=422,
+        code="request_validation_error",
+        title="Validation Error",
+        detail="The request is invalid.",
+        errors=exc.errors,
+    )
+    return api.create_response(request, problem.model_dump(), status=422)
+
+
 @auth_router.post(
     "/login",
     response={200: TokenResponse, 401: ProblemDetailSchema},
@@ -97,7 +111,7 @@ def list_reservations(request):
 
 @reservation_router.post(
     "/",
-    response={200: ReservationListItem, 400: ProblemDetailSchema},
+    response={200: ReservationListItem, 400: ProblemDetailSchema, 422: ProblemDetailSchema},
     auth=client_auth,
 )
 def create_reservation(request, payload: ReservationCreateRequest):
@@ -122,7 +136,7 @@ def create_reservation(request, payload: ReservationCreateRequest):
 
 @reservation_router.post(
     "/{reservation_id}/cancel",
-    response={200: ReservationListItem, 400: ProblemDetailSchema},
+    response={200: ReservationListItem, 400: ProblemDetailSchema, 422: ProblemDetailSchema},
     auth=client_auth,
 )
 def cancel_reservation(request, reservation_id: UUID, payload: ReservationCancelRequest):

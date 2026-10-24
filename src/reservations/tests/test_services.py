@@ -1,4 +1,3 @@
-from uuid import uuid4
 
 import pytest
 
@@ -10,7 +9,6 @@ from reservations.constants import (
 )
 from reservations.exceptions import (
     HoldReasonRequiredError,
-    ReservationNotFoundError,
     ReservationStatusTransitionError,
 )
 from reservations.services import ReservationLifecycleService

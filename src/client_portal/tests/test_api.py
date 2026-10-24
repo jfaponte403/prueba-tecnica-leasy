@@ -178,6 +178,45 @@ def test_cancel_reservation_requires_reason(client):
 
 
 @pytest.mark.django_db
+def test_cancel_reservation_without_reason_returns_problem_detail(client):
+    customer = CustomerFactory()
+    reservation = ReservationFactory(customer=customer)
+    token = ClientTokenService.issue_access_token(customer=customer)
+
+    response = client.post(
+        f"/api/v1/reservations/{reservation.id}/cancel",
+        data={},
+        content_type="application/json",
+        HTTP_AUTHORIZATION=f"Bearer {token}",
+    )
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["type"] == "urn:assessment:problem:request_validation_error"
+    assert payload["title"] == "Validation Error"
+    assert payload["status"] == 422
+    assert payload["code"] == "request_validation_error"
+    assert payload["instance"] == f"/api/v1/reservations/{reservation.id}/cancel"
+    assert payload["errors"][0]["loc"] == ["body", "payload", "reason"]
+    assert "detail" in payload and isinstance(payload["detail"], str)
+    reservation.refresh_from_db()
+    assert reservation.status == "requested"
+
+
+@pytest.mark.django_db
+def test_cancel_reservation_with_invalid_id_returns_problem_detail(client):
+    token = ClientTokenService.issue_access_token(customer=CustomerFactory())
+
+    response = _cancel(client, reservation_id="not-a-uuid", token=token)
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["code"] == "request_validation_error"
+    assert payload["instance"] == "/api/v1/reservations/not-a-uuid/cancel"
+    assert payload["errors"][0]["loc"] == ["path", "reservation_id"]
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("status", ["cancelled", "on_hold"])
 def test_cancel_reservation_rejects_non_cancellable_status(client, status):
     customer = CustomerFactory()
