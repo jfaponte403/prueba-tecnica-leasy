@@ -111,7 +111,11 @@ def list_reservations(request):
 
 @reservation_router.post(
     "/",
-    response={200: ReservationListItem, 400: ProblemDetailSchema, 422: ProblemDetailSchema},
+    response={
+        200: ReservationListItem,
+        400: ProblemDetailSchema,
+        422: ProblemDetailSchema,
+    },
     auth=client_auth,
 )
 def create_reservation(request, payload: ReservationCreateRequest):
@@ -136,7 +140,11 @@ def create_reservation(request, payload: ReservationCreateRequest):
 
 @reservation_router.post(
     "/{reservation_id}/cancel",
-    response={200: ReservationListItem, 400: ProblemDetailSchema, 422: ProblemDetailSchema},
+    response={
+        200: ReservationListItem,
+        400: ProblemDetailSchema,
+        422: ProblemDetailSchema,
+    },
     auth=client_auth,
 )
 def cancel_reservation(request, reservation_id: UUID, payload: ReservationCancelRequest):
