@@ -1,0 +1,62 @@
+name: prueba-tecnica-leasy
+
+x-common: &common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  backend:
+    <<: *common
+    image: ${IMAGE_REGISTRY:-leasy}/backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      tags:
+        - ${IMAGE_REGISTRY:-leasy}/backend:${IMAGE_TAG:-latest}
+        - ${IMAGE_REGISTRY:-leasy}/backend:${APP_VERSION:-0.1.0}
+      labels:
+        org.opencontainers.image.title: "leasy-backend"
+        org.opencontainers.image.description: "Backoffice Django + API cliente (gunicorn)"
+        org.opencontainers.image.version: ${APP_VERSION:-0.1.0}
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-in-production}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,backend}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:${BACKEND_PORT:-8000},http://127.0.0.1:${BACKEND_PORT:-8000}}
+      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-http://localhost:${CLIENT_PORT:-8080},http://127.0.0.1:${CLIENT_PORT:-8080}}
+      DJANGO_SQLITE_PATH: /data/db.sqlite3
+      DJANGO_SEED_DEMO_DATA: ${DJANGO_SEED_DEMO_DATA:-true}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-8}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - backend-data:/data
+
+  client:
+    <<: *common
+    image: ${IMAGE_REGISTRY:-leasy}/client-app:${IMAGE_TAG:-latest}
+    build:
+      context: ./client-app
+      dockerfile: Dockerfile
+      tags:
+        - ${IMAGE_REGISTRY:-leasy}/client-app:${IMAGE_TAG:-latest}
+        - ${IMAGE_REGISTRY:-leasy}/client-app:${APP_VERSION:-0.1.0}
+      labels:
+        org.opencontainers.image.title: "leasy-client-app"
+        org.opencontainers.image.description: "Mini app cliente (React + Vite) servida por nginx"
+        org.opencontainers.image.version: ${APP_VERSION:-0.1.0}
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:${BACKEND_PORT:-8000}/api/v1}
+    ports:
+      - "${CLIENT_PORT:-8080}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend-data:
