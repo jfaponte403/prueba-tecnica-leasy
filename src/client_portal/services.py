@@ -4,10 +4,12 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from client_portal.exceptions import InvalidCredentialsError
 from reservations.constants import (
     CLIENT_CANCELLABLE_STATUSES,
+    RESERVATION_BLOCKING_STATUSES,
     RESERVATION_STATUS_CANCELLED,
     RESERVATION_STATUS_REQUESTED,
 )
@@ -15,8 +17,10 @@ from reservations.exceptions import (
     CancelReasonRequiredError,
     InvalidReservationPeriodError,
     ReservationNotFoundError,
+    ReservationNotOnTheHourError,
     ReservationStatusTransitionError,
     RoomNotFoundError,
+    RoomUnavailableError,
 )
 from reservations.models import Customer, Reservation, Room
 
@@ -44,6 +48,22 @@ class ClientReservationQueryService:
         return Reservation.objects.filter(customer_id=customer_id).select_related("room")
 
 
+class ClientRoomOccupancyService:
+    def get_occupied_slots(self) -> QuerySet[Reservation]:
+        return Reservation.objects.filter(
+            status__in=RESERVATION_BLOCKING_STATUSES,
+            ends_at__gt=timezone.now(),
+        ).order_by("starts_at")
+
+    def get_slot_changes(self, *, since) -> QuerySet[Reservation]:
+        return Reservation.objects.filter(updated_at__gt=since).order_by("updated_at")
+
+
+def _is_on_the_hour(value) -> bool:
+    local_value = timezone.localtime(value)
+    return local_value.minute == local_value.second == local_value.microsecond == 0
+
+
 class ClientReservationCreateService:
     @transaction.atomic
     def create_reservation(
@@ -57,9 +77,23 @@ class ClientReservationCreateService:
         if ends_at <= starts_at:
             raise InvalidReservationPeriodError()
 
-        room = Room.objects.filter(pk=room_id).first()
+        # Rooms are booked in whole hours
+        if not (_is_on_the_hour(starts_at) and _is_on_the_hour(ends_at)):
+            raise ReservationNotOnTheHourError()
+
+        # Locking the room serializes concurrent bookings of the same room
+        room = Room.objects.select_for_update().filter(pk=room_id).first()
         if room is None:
             raise RoomNotFoundError()
+
+        is_occupied = Reservation.objects.filter(
+            room=room,
+            status__in=RESERVATION_BLOCKING_STATUSES,
+            starts_at__lt=ends_at,
+            ends_at__gt=starts_at,
+        ).exists()
+        if is_occupied:
+            raise RoomUnavailableError()
 
         return Reservation.objects.create(
             customer=customer,

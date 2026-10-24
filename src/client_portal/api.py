@@ -5,6 +5,7 @@ from uuid import UUID
 from ninja import NinjaAPI, Router
 from ninja.responses import Status
 
+from client_portal.events import RoomOccupancyEventStream
 from client_portal.schemas import (
     ClientProfileSchema,
     LoginRequest,
@@ -141,6 +142,11 @@ def cancel_reservation(request, reservation_id: UUID, payload: ReservationCancel
             cancel_reason=reservation.cancel_reason or None,
         ),
     )
+
+
+@room_router.get("/occupancy/events", auth=client_auth)
+def room_occupancy_events(request):
+    return RoomOccupancyEventStream().as_response()
 
 
 @room_router.get("/", response=list[RoomListItem], auth=client_auth)

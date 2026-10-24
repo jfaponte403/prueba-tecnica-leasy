@@ -69,6 +69,14 @@ class ReservationListItem(BaseModel):
     cancel_reason: str | None = None
 
 
+class OccupiedSlot(BaseModel):
+    reservation_id: UUID
+    room_id: UUID
+    starts_at: datetime
+    ends_at: datetime
+    is_blocking: bool
+
+
 class ReservationCreateRequest(BaseModel):
     room_id: UUID
     starts_at: datetime

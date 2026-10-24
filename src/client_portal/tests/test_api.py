@@ -1,6 +1,11 @@
+import json
+from datetime import datetime, timedelta
+
 import pytest
+from django.utils import timezone
 
 from client_portal.security import ClientTokenService
+from client_portal.services import ClientRoomOccupancyService
 from reservations.models import Reservation
 from reservations.tests.factories import (
     CustomerFactory,
@@ -196,3 +201,147 @@ def test_cancel_reservation_requires_authentication(client):
     )
 
     assert response.status_code == 401
+
+
+def _create(client, *, room, token, starts_at, ends_at):
+    return client.post(
+        "/api/v1/reservations/",
+        data={"room_id": str(room.id), "starts_at": starts_at, "ends_at": ends_at},
+        content_type="application/json",
+        HTTP_AUTHORIZATION=f"Bearer {token}",
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("status", ["requested", "confirmed", "on_hold"])
+def test_create_reservation_rejects_overlapping_slot_of_other_customer(client, status):
+    room = RoomFactory()
+    ReservationFactory(
+        room=room,
+        status=status,
+        starts_at=datetime.fromisoformat("2026-04-20T15:00:00-05:00"),
+        ends_at=datetime.fromisoformat("2026-04-20T17:00:00-05:00"),
+    )
+    customer = CustomerFactory()
+    token = ClientTokenService.issue_access_token(customer=customer)
+
+    response = _create(
+        client,
+        room=room,
+        token=token,
+        starts_at="2026-04-20T16:00:00-05:00",
+        ends_at="2026-04-20T18:00:00-05:00",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "reservation_room_unavailable"
+    assert not Reservation.objects.filter(customer=customer).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("starts_at", "ends_at"),
+    [
+        ("2026-04-20T15:30:00-05:00", "2026-04-20T17:00:00-05:00"),
+        ("2026-04-20T15:00:00-05:00", "2026-04-20T16:45:00-05:00"),
+    ],
+)
+def test_create_reservation_requires_whole_hours(client, starts_at, ends_at):
+    room = RoomFactory()
+    token = ClientTokenService.issue_access_token(customer=CustomerFactory())
+
+    response = _create(client, room=room, token=token, starts_at=starts_at, ends_at=ends_at)
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "reservation_not_on_the_hour"
+    assert not Reservation.objects.exists()
+
+
+@pytest.mark.django_db
+def test_create_reservation_allows_adjacent_or_cancelled_slots(client):
+    room = RoomFactory()
+    ReservationFactory(
+        room=room,
+        starts_at=datetime.fromisoformat("2026-04-20T15:00:00-05:00"),
+        ends_at=datetime.fromisoformat("2026-04-20T17:00:00-05:00"),
+    )
+    ReservationFactory(
+        room=room,
+        status="cancelled",
+        starts_at=datetime.fromisoformat("2026-04-20T17:00:00-05:00"),
+        ends_at=datetime.fromisoformat("2026-04-20T19:00:00-05:00"),
+    )
+    token = ClientTokenService.issue_access_token(customer=CustomerFactory())
+
+    response = _create(
+        client,
+        room=room,
+        token=token,
+        starts_at="2026-04-20T17:00:00-05:00",
+        ends_at="2026-04-20T19:00:00-05:00",
+    )
+
+    assert response.status_code == 200
+
+
+def _read_events(response) -> list[tuple[str, object]]:
+    body = b"".join(response.streaming_content).decode()
+    events = []
+    for block in body.split("\n\n"):
+        lines = dict(line.split(": ", 1) for line in block.splitlines() if line.startswith(("event", "data")))
+        if "event" in lines:
+            events.append((lines["event"], json.loads(lines["data"])))
+    return events
+
+
+@pytest.mark.django_db
+def test_room_occupancy_events_starts_with_snapshot_of_occupied_slots(client, settings):
+    settings.CLIENT_EVENTS_MAX_SECONDS = 0
+    occupied = ReservationFactory(customer=CustomerFactory())
+    ReservationFactory(status="cancelled")
+    ReservationFactory(
+        starts_at=timezone.now() - timedelta(hours=3),
+        ends_at=timezone.now() - timedelta(hours=1),
+    )
+    token = ClientTokenService.issue_access_token(customer=CustomerFactory())
+
+    response = client.get(
+        "/api/v1/rooms/occupancy/events",
+        HTTP_AUTHORIZATION=f"Bearer {token}",
+    )
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == "text/event-stream"
+    assert _read_events(response) == [
+        (
+            "snapshot",
+            [
+                {
+                    "reservation_id": str(occupied.id),
+                    "room_id": str(occupied.room_id),
+                    "starts_at": occupied.starts_at.isoformat().replace("+00:00", "Z"),
+                    "ends_at": occupied.ends_at.isoformat().replace("+00:00", "Z"),
+                    "is_blocking": True,
+                }
+            ],
+        )
+    ]
+
+
+@pytest.mark.django_db
+def test_room_occupancy_events_requires_authentication(client):
+    response = client.get("/api/v1/rooms/occupancy/events")
+
+    assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_room_occupancy_slot_changes_include_released_slots():
+    since = timezone.now()
+    reservation = ReservationFactory()
+    reservation.status = "cancelled"
+    reservation.save()
+
+    changes = list(ClientRoomOccupancyService().get_slot_changes(since=since))
+
+    assert changes == [reservation]

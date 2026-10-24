@@ -324,3 +324,40 @@ td {
   color: var(--danger);
   font-size: 0.9rem;
 }
+
+.live-status {
+  margin: 6px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.live-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.live-status--on::before {
+  background: var(--status-confirmed-text);
+}
+
+.occupied-slots {
+  font-size: 0.9rem;
+}
+
+.occupied-slots ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.occupied-slots .is-conflict {
+  color: var(--danger);
+  font-weight: 600;
+}

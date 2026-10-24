@@ -1,7 +1,19 @@
 import { useEffect, useRef } from 'react'
-import { useCreateReservation } from '../hooks/useCreateReservation.ts'
+import {
+  formatHour,
+  HOURS,
+  isHourOccupied,
+  ROOM_UNAVAILABLE_MESSAGE,
+  useCreateReservation,
+} from '../hooks/useCreateReservation.ts'
+import { useRoomOccupancy } from '../hooks/useRoomOccupancy.ts'
 import { useRooms } from '../hooks/useRooms.ts'
 import type { Reservation } from '../services/reservationService.ts'
+
+const slotFormatter = new Intl.DateTimeFormat('es-CO', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
 
 interface CreateReservationModalProps {
   isOpen: boolean
@@ -12,12 +24,19 @@ interface CreateReservationModalProps {
 function CreateReservationModal({ isOpen, onClose, onCreated }: CreateReservationModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const { rooms, error: roomsError, isLoading: isLoadingRooms } = useRooms()
-  const { values, error, isSubmitting, handleChange, handleSubmit, reset } = useCreateReservation({
-    onCreated: (reservation) => {
-      onCreated(reservation)
-      onClose()
-    },
-  })
+  const { slots, isConnected } = useRoomOccupancy()
+  const { values, error, conflict, isSubmitting, handleChange, handleSubmit, reset } =
+    useCreateReservation({
+      occupiedSlots: slots,
+      onCreated: (reservation) => {
+        onCreated(reservation)
+        onClose()
+      },
+    })
+
+  const roomSlots = slots
+    .filter((slot) => slot.room_id === values.room_id)
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -37,6 +56,9 @@ function CreateReservationModal({ isOpen, onClose, onCreated }: CreateReservatio
         <div>
           <h2>Nueva reserva</h2>
           <p className="muted">Indica la sala y el horario que necesitas.</p>
+          <p className={`live-status ${isConnected ? 'live-status--on' : ''}`}>
+            {isConnected ? 'Disponibilidad en tiempo real' : 'Conectando disponibilidad…'}
+          </p>
         </div>
 
         <label className="field">
@@ -69,30 +91,73 @@ function CreateReservationModal({ isOpen, onClose, onCreated }: CreateReservatio
           <p className="muted">No hay salas disponibles.</p>
         )}
 
+        <label className="field">
+          Fecha
+          <input type="date" name="date" value={values.date} onChange={handleChange} required />
+        </label>
+
         <div className="grid-2">
           <label className="field">
-            Inicio
-            <input
-              type="datetime-local"
-              name="starts_at"
-              value={values.starts_at}
-              onChange={handleChange}
-              required
-            />
+            Hora de inicio
+            <select name="start_hour" value={values.start_hour} onChange={handleChange} required>
+              <option value="" disabled>
+                Selecciona
+              </option>
+              {HOURS.slice(0, -1).map((hour) => {
+                const isOccupied = isHourOccupied(slots, values.room_id, values.date, hour)
+                return (
+                  <option key={hour} value={hour} disabled={isOccupied}>
+                    {formatHour(hour)}
+                    {isOccupied ? ' · ocupada' : ''}
+                  </option>
+                )
+              })}
+            </select>
           </label>
 
           <label className="field">
-            Fin
-            <input
-              type="datetime-local"
-              name="ends_at"
-              min={values.starts_at || undefined}
-              value={values.ends_at}
+            Hora de fin
+            <select
+              name="end_hour"
+              value={values.end_hour}
               onChange={handleChange}
+              disabled={values.start_hour === ''}
               required
-            />
+            >
+              <option value="" disabled>
+                Selecciona
+              </option>
+              {HOURS.slice(Number(values.start_hour) + 1).map((hour) => (
+                <option key={hour} value={hour}>
+                  {formatHour(hour)}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
+
+        {values.room_id && roomSlots.length > 0 && (
+          <div className="occupied-slots">
+            <p className="muted">Horarios ocupados en esta sala</p>
+            <ul>
+              {roomSlots.map((slot) => (
+                <li
+                  key={slot.reservation_id}
+                  className={slot.reservation_id === conflict?.reservation_id ? 'is-conflict' : ''}
+                >
+                  {slotFormatter.format(new Date(slot.starts_at))} –{' '}
+                  {slotFormatter.format(new Date(slot.ends_at))}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {conflict && !error && (
+          <p className="error" role="alert">
+            {ROOM_UNAVAILABLE_MESSAGE}
+          </p>
+        )}
 
         {error && (
           <p className="error" role="alert">
@@ -104,7 +169,11 @@ function CreateReservationModal({ isOpen, onClose, onCreated }: CreateReservatio
           <button className="btn" type="button" onClick={handleClose} disabled={isSubmitting}>
             Cancelar
           </button>
-          <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+          <button
+            className="btn btn-primary"
+            type="submit"
+            disabled={isSubmitting || conflict !== null}
+          >
             {isSubmitting ? 'Creando…' : 'Crear reserva'}
           </button>
         </div>

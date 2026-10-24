@@ -26,6 +26,16 @@ class InvalidReservationPeriodError(ReservationError):
     detail = "Reservation end must be after its start."
 
 
+class ReservationNotOnTheHourError(ReservationError):
+    code = "reservation_not_on_the_hour"
+    detail = "Reservations must start and end on the hour."
+
+
+class RoomUnavailableError(ReservationError):
+    code = "reservation_room_unavailable"
+    detail = "The room is already booked for the selected time."
+
+
 class CancelReasonRequiredError(ReservationError):
     code = "reservation_cancel_reason_required"
     detail = "A cancellation reason is required."
