@@ -110,3 +110,34 @@ def test_reservation_hold_without_reason_keeps_status(client):
 
     reservation.refresh_from_db()
     assert reservation.status == "requested"
+
+@pytest.mark.django_db
+def test_reservation_release_hold_requires_hold_permission(client):
+    reservation = ReservationFactory(status="on_hold", hold_reason="Pendiente de pago")
+    user = UserFactory()
+    grant_permission(user=user, codename="change_reservation")
+    client.force_login(user)
+
+    response = client.post(reverse("reservation_release_hold", args=[reservation.id]))
+
+    assert response.status_code == 403
+    reservation.refresh_from_db()
+    assert reservation.status == "on_hold"
+
+
+@pytest.mark.django_db
+def test_reservation_release_hold_sets_status_requested(client):
+    reservation = ReservationFactory(status="on_hold", hold_reason="Pendiente de pago")
+    user = UserFactory()
+    grant_permission(user=user, codename="view_reservation")
+    grant_permission(user=user, codename="hold_reservation")
+    client.force_login(user)
+
+    client.post(
+        reverse("reservation_release_hold", args=[reservation.id]),
+        follow=True,
+    )
+
+    reservation.refresh_from_db()
+    assert reservation.status == "requested"
+    assert reservation.hold_reason == ""

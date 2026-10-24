@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        {% if can_change and reservation.status == "requested" or can_hold %}
+        {% if can_change and reservation.status == "requested" or can_hold or can_release_hold %}
             <div class="card">
                 <h3 style="margin-top:0;">Acciones rápidas</h3>
                 <div class="actions">
@@ -69,6 +69,12 @@
                     {% endif %}
                     {% if can_hold %}
                         <button class="btn" type="button" data-open-dialog="on-hold-dialog">En espera</button>
+                    {% endif %}
+                    {% if can_release_hold %}
+                        <form method="post" action="{% url 'reservation_release_hold' reservation.id %}">
+                            {% csrf_token %}
+                            <button class="btn btn-primary" type="submit">Devolver a solicitada</button>
+                        </form>
                     {% endif %}
                 </div>
             </div>

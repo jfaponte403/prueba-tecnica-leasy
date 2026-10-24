@@ -135,3 +135,28 @@ class ReservationLifecycleService:
         reservation.hold_reason = reason
         reservation.save(update_fields=["status", "hold_reason", "updated_at"])
         return reservation
+
+    @transaction.atomic
+    def release_hold(
+        self,
+        *,
+        reservation_id: UUID,
+        actor_id: int | None = None,
+    ) -> Reservation:
+        _ = actor_id
+        try:
+            reservation = (
+                Reservation.objects.select_for_update()
+                .select_related("customer__user", "room")
+                .get(pk=reservation_id)
+            )
+        except Reservation.DoesNotExist as exc:
+            raise ReservationNotFoundError() from exc
+
+        if reservation.status != RESERVATION_STATUS_ON_HOLD:
+            raise ReservationStatusTransitionError()
+
+        reservation.status = RESERVATION_STATUS_REQUESTED
+        reservation.hold_reason = ""
+        reservation.save(update_fields=["status", "hold_reason", "updated_at"])
+        return reservation

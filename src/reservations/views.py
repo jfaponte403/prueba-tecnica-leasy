@@ -6,7 +6,10 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
-from reservations.constants import RESERVATION_HOLDABLE_STATUSES
+from reservations.constants import (
+    RESERVATION_HOLDABLE_STATUSES,
+    RESERVATION_STATUS_ON_HOLD,
+)
 from reservations.exceptions import (
     HoldReasonRequiredError,
     ReservationStatusTransitionError,
@@ -48,6 +51,10 @@ class ReservationDetailView(
                 "can_hold": (
                     request.user.has_perm("reservations.hold_reservation")
                     and reservation.status in RESERVATION_HOLDABLE_STATUSES
+                ),
+                "can_release_hold": (
+                    request.user.has_perm("reservations.hold_reservation")
+                    and reservation.status == RESERVATION_STATUS_ON_HOLD
                 ),
             },
         )
@@ -137,4 +144,22 @@ class ReservationHoldView(
             )
         else:
             messages.success(request, "Reserva puesta en espera.")
+        return redirect("reservation_detail", pk=pk)
+
+
+class ReservationReleaseHoldView(
+    LoginRequiredMixin, AuthenticatedPermissionRequiredMixin, View
+):
+    permission_required = "reservations.hold_reservation"
+
+    def post(self, request: HttpRequest, pk) -> HttpResponse:
+        try:
+            ReservationLifecycleService().release_hold(
+                reservation_id=pk,
+                actor_id=request.user.id,
+            )
+        except ReservationStatusTransitionError:
+            messages.error(request, "La reserva no está en espera.")
+        else:
+            messages.success(request, "Reserva devuelta a solicitada.")
         return redirect("reservation_detail", pk=pk)

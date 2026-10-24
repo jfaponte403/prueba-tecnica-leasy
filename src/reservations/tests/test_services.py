@@ -81,3 +81,32 @@ def test_hold_reservation_requires_reason(reason):
 
     reservation.refresh_from_db()
     assert reservation.status == RESERVATION_STATUS_REQUESTED
+
+
+@pytest.mark.django_db
+def test_release_hold_moves_on_hold_to_requested_and_clears_reason():
+    reservation = ReservationFactory(
+        status=RESERVATION_STATUS_ON_HOLD, hold_reason="Pendiente de pago"
+    )
+
+    ReservationLifecycleService().release_hold(reservation_id=reservation.id)
+
+    reservation.refresh_from_db()
+    assert reservation.status == RESERVATION_STATUS_REQUESTED
+    assert reservation.hold_reason == ""
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "status",
+    [
+        RESERVATION_STATUS_REQUESTED,
+        RESERVATION_STATUS_CONFIRMED,
+        RESERVATION_STATUS_CANCELLED,
+    ],
+)
+def test_release_hold_rejects_reservation_not_on_hold(status):
+    reservation = ReservationFactory(status=status)
+
+    with pytest.raises(ReservationStatusTransitionError):
+        ReservationLifecycleService().release_hold(reservation_id=reservation.id)
