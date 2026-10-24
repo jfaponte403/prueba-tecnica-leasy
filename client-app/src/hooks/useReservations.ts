@@ -41,5 +41,9 @@ export function useReservations() {
     setReservations((prev) => [reservation, ...prev])
   }
 
-  return { reservations, error, isLoading, addReservation }
+  const updateReservation = (reservation: Reservation) => {
+    setReservations((prev) => prev.map((item) => (item.id === reservation.id ? reservation : item)))
+  }
+
+  return { reservations, error, isLoading, addReservation, updateReservation }
 }

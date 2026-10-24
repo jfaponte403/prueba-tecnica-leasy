@@ -11,6 +11,7 @@
   --primary: #2563eb;
   --primary-strong: #1d4ed8;
   --danger: #b42318;
+  --danger-strong: #912018;
   --badge-bg: #e6eefc;
   --badge-text: #1e40af;
 }
@@ -182,6 +183,11 @@ td {
   background: var(--danger);
   border-color: var(--danger);
   color: #fff;
+}
+
+.btn-danger:hover {
+  background: var(--danger-strong);
+  border-color: var(--danger-strong);
 }
 
 .badge {

@@ -1,13 +1,16 @@
 import { useState } from 'react'
+import CancelReservationModal from '../components/CancelReservationModal.tsx'
 import CreateReservationModal from '../components/CreateReservationModal.tsx'
 import { useReservations } from '../hooks/useReservations.ts'
-import type { ReservationStatus } from '../services/reservationService.ts'
+import type { Reservation, ReservationStatus } from '../services/reservationService.ts'
 
 const STATUS_LABELS: Record<ReservationStatus, string> = {
   requested: 'Solicitada',
   confirmed: 'Confirmada',
   cancelled: 'Cancelada',
 }
+
+const CANCELLABLE_STATUSES: ReservationStatus[] = ['requested', 'confirmed']
 
 const dateFormatter = new Intl.DateTimeFormat('es-CO', {
   dateStyle: 'medium',
@@ -19,8 +22,9 @@ function formatDate(value: string): string {
 }
 
 function ReservationsPage() {
-  const { reservations, error, isLoading, addReservation } = useReservations()
+  const { reservations, error, isLoading, addReservation, updateReservation } = useReservations()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [reservationToCancel, setReservationToCancel] = useState<Reservation | null>(null)
 
   return (
     <main className="shell">
@@ -35,6 +39,12 @@ function ReservationsPage() {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onCreated={addReservation}
+      />
+
+      <CancelReservationModal
+        reservation={reservationToCancel}
+        onClose={() => setReservationToCancel(null)}
+        onCancelled={updateReservation}
       />
 
       <section className="card">
@@ -59,6 +69,7 @@ function ReservationsPage() {
                 <th>Inicio</th>
                 <th>Fin</th>
                 <th>Motivo de cancelación</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -73,6 +84,19 @@ function ReservationsPage() {
                   <td>{formatDate(reservation.starts_at)}</td>
                   <td>{formatDate(reservation.ends_at)}</td>
                   <td>{reservation.cancel_reason ?? <span className="muted">—</span>}</td>
+                  <td>
+                    {CANCELLABLE_STATUSES.includes(reservation.status) ? (
+                      <button
+                        className="btn btn-danger"
+                        type="button"
+                        onClick={() => setReservationToCancel(reservation)}
+                      >
+                        Cancelar
+                      </button>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

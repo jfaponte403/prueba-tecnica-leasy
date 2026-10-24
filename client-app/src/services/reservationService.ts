@@ -17,6 +17,10 @@ export interface CreateReservationPayload {
   ends_at: string
 }
 
+export interface CancelReservationPayload {
+  reason: string
+}
+
 export const reservationService = {
   list(): Promise<Reservation[]> {
     return apiClient.get<Reservation[]>('/reservations/')
@@ -24,5 +28,9 @@ export const reservationService = {
 
   create(payload: CreateReservationPayload): Promise<Reservation> {
     return apiClient.post<Reservation>('/reservations/', payload)
+  },
+
+  cancel(id: string, payload: CancelReservationPayload): Promise<Reservation> {
+    return apiClient.post<Reservation>(`/reservations/${id}/cancel`, payload)
   },
 }
