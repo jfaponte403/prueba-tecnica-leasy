@@ -14,6 +14,14 @@
   --danger-strong: #912018;
   --badge-bg: #e6eefc;
   --badge-text: #1e40af;
+  --status-requested-bg: #e0ecff;
+  --status-requested-text: #1e4fa8;
+  --status-confirmed-bg: #dcf3e4;
+  --status-confirmed-text: #1d6b3d;
+  --status-on-hold-bg: #fdf0d2;
+  --status-on-hold-text: #8a5a00;
+  --status-cancelled-bg: #fbe2df;
+  --status-cancelled-text: #9f2a20;
 }
 
 * {
@@ -198,6 +206,26 @@ td {
   font-weight: 600;
   background: var(--badge-bg);
   color: var(--badge-text);
+}
+
+.badge--requested {
+  background: var(--status-requested-bg);
+  color: var(--status-requested-text);
+}
+
+.badge--confirmed {
+  background: var(--status-confirmed-bg);
+  color: var(--status-confirmed-text);
+}
+
+.badge--on_hold {
+  background: var(--status-on-hold-bg);
+  color: var(--status-on-hold-text);
+}
+
+.badge--cancelled {
+  background: var(--status-cancelled-bg);
+  color: var(--status-cancelled-text);
 }
 
 .stack {

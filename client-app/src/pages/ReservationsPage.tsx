@@ -8,6 +8,7 @@ const STATUS_LABELS: Record<ReservationStatus, string> = {
   requested: 'Solicitada',
   confirmed: 'Confirmada',
   cancelled: 'Cancelada',
+  on_hold: 'En espera',
 }
 
 const CANCELLABLE_STATUSES: ReservationStatus[] = ['requested', 'confirmed']
@@ -77,7 +78,7 @@ function ReservationsPage() {
                 <tr key={reservation.id}>
                   <td>{reservation.room_name}</td>
                   <td>
-                    <span className="badge">
+                    <span className={`badge badge--${reservation.status}`}>
                       {STATUS_LABELS[reservation.status] ?? reservation.status}
                     </span>
                   </td>

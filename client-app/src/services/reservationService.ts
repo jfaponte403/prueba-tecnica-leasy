@@ -1,6 +1,6 @@
 import { apiClient } from '../API/ApiClient.ts'
 
-export type ReservationStatus = 'requested' | 'confirmed' | 'cancelled'
+export type ReservationStatus = 'requested' | 'confirmed' | 'cancelled' | 'on_hold'
 
 export interface Reservation {
   id: string
