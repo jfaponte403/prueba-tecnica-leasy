@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import CreateReservationModal from '../components/CreateReservationModal.tsx'
 import { useReservations } from '../hooks/useReservations.ts'
 import type { ReservationStatus } from '../services/reservationService.ts'
 
@@ -17,13 +19,23 @@ function formatDate(value: string): string {
 }
 
 function ReservationsPage() {
-  const { reservations, error, isLoading } = useReservations()
+  const { reservations, error, isLoading, addReservation } = useReservations()
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
 
   return (
     <main className="shell">
       <div className="topbar">
         <h1>Mis reservas</h1>
+        <button className="btn btn-primary" type="button" onClick={() => setIsCreateOpen(true)}>
+          Nueva reserva
+        </button>
       </div>
+
+      <CreateReservationModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onCreated={addReservation}
+      />
 
       <section className="card">
         {isLoading && <p className="muted">Cargando reservas…</p>}

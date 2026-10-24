@@ -246,6 +246,29 @@ td {
   color: var(--muted);
 }
 
+.modal {
+  width: min(520px, calc(100% - 32px));
+  color: var(--text);
+}
+
+.modal::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.modal h2 {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.modal__actions {
+  justify-content: flex-end;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 700px) {
   .grid-2 {
     grid-template-columns: 1fr;

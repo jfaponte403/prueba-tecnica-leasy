@@ -11,8 +11,18 @@ export interface Reservation {
   cancel_reason: string | null
 }
 
+export interface CreateReservationPayload {
+  room_id: string
+  starts_at: string
+  ends_at: string
+}
+
 export const reservationService = {
   list(): Promise<Reservation[]> {
     return apiClient.get<Reservation[]>('/reservations/')
+  },
+
+  create(payload: CreateReservationPayload): Promise<Reservation> {
+    return apiClient.post<Reservation>('/reservations/', payload)
   },
 }

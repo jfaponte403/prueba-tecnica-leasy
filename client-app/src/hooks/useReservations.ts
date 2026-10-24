@@ -37,5 +37,9 @@ export function useReservations() {
     }
   }, [navigate])
 
-  return { reservations, error, isLoading }
+  const addReservation = (reservation: Reservation) => {
+    setReservations((prev) => [reservation, ...prev])
+  }
+
+  return { reservations, error, isLoading, addReservation }
 }
