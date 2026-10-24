@@ -53,10 +53,17 @@
         {% if can_change and reservation.status == "requested" %}
             <div class="card">
                 <h3 style="margin-top:0;">Acciones rápidas</h3>
-                <form method="post" action="{% url 'reservation_confirm' reservation.id %}">
-                    {% csrf_token %}
-                    <button class="btn btn-primary" type="submit">Confirmar reserva</button>
-                </form>
+                <div class="actions">
+                    <form method="post" action="{% url 'reservation_confirm' reservation.id %}">
+                        {% csrf_token %}
+                        <button class="btn btn-primary" type="submit">Confirmar reserva</button>
+                    </form>
+                    <form method="post" action="{% url 'reservation_cancel' reservation.id %}">
+                        {% csrf_token %}
+                        <button class="btn" type="submit">Cancelar</button>
+                    </form>
+                    <button class="btn" type="button">En espera</button>
+                </div>
             </div>
         {% endif %}
     </div>

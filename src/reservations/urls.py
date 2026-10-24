@@ -1,6 +1,7 @@
 from django.urls import path
 
 from reservations.views import (
+    ReservationCancelView,
     ReservationConfirmView,
     ReservationDetailView,
     ReservationListView,
@@ -15,5 +16,10 @@ urlpatterns = [
         "<uuid:pk>/confirm/",
         ReservationConfirmView.as_view(),
         name="reservation_confirm",
+    ),
+    path(
+        "<uuid:pk>/cancel/",
+        ReservationCancelView.as_view(),
+        name="reservation_cancel",
     ),
 ]

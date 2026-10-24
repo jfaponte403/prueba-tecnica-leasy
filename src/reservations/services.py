@@ -5,6 +5,7 @@ from uuid import UUID
 from django.db import transaction
 
 from reservations.constants import (
+    RESERVATION_STATUS_CANCELLED,
     RESERVATION_STATUS_CONFIRMED,
     RESERVATION_STATUS_REQUESTED,
 )
@@ -75,5 +76,29 @@ class ReservationLifecycleService:
             raise ReservationStatusTransitionError()
 
         reservation.status = RESERVATION_STATUS_CONFIRMED
+        reservation.save(update_fields=["status", "updated_at"])
+        return reservation
+
+    @transaction.atomic
+    def cancel_reservation(
+        self,
+        *,
+        reservation_id: UUID,
+        actor_id: int | None = None,
+    ) -> Reservation:
+        _ = actor_id
+        try:
+            reservation = (
+                Reservation.objects.select_for_update()
+                .select_related("customer__user", "room")
+                .get(pk=reservation_id)
+            )
+        except Reservation.DoesNotExist as exc:
+            raise ReservationNotFoundError() from exc
+
+        if reservation.status == RESERVATION_STATUS_CANCELLED:
+            raise ReservationStatusTransitionError()
+
+        reservation.status = RESERVATION_STATUS_CANCELLED
         reservation.save(update_fields=["status", "updated_at"])
         return reservation

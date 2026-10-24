@@ -92,3 +92,17 @@ class ReservationConfirmView(
         )
         messages.success(request, "Reserva confirmada.")
         return redirect("reservation_detail", pk=pk)
+
+
+class ReservationCancelView(
+    LoginRequiredMixin, AuthenticatedPermissionRequiredMixin, View
+):
+    permission_required = "reservations.change_reservation"
+
+    def post(self, request: HttpRequest, pk) -> HttpResponse:
+        ReservationLifecycleService().cancel_reservation(
+            reservation_id=pk,
+            actor_id=request.user.id,
+        )
+        messages.success(request, "Reserva cancelada.")
+        return redirect("reservation_detail", pk=pk)

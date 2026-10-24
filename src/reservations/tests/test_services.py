@@ -22,3 +22,21 @@ def test_confirm_reservation_rejects_invalid_transition():
 
     with pytest.raises(ReservationStatusTransitionError):
         ReservationLifecycleService().confirm_reservation(reservation_id=reservation.id)
+
+
+@pytest.mark.django_db
+def test_cancel_reservation_moves_requested_to_cancelled():
+    reservation = ReservationFactory(status="requested")
+
+    ReservationLifecycleService().cancel_reservation(reservation_id=reservation.id)
+
+    reservation.refresh_from_db()
+    assert reservation.status == RESERVATION_STATUS_CANCELLED
+
+
+@pytest.mark.django_db
+def test_cancel_reservation_rejects_already_cancelled():
+    reservation = ReservationFactory(status=RESERVATION_STATUS_CANCELLED)
+
+    with pytest.raises(ReservationStatusTransitionError):
+        ReservationLifecycleService().cancel_reservation(reservation_id=reservation.id)
