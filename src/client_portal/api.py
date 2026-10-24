@@ -7,11 +7,16 @@ from client_portal.schemas import (
     ClientProfileSchema,
     LoginRequest,
     ProblemDetailSchema,
+    ReservationCreateRequest,
     ReservationListItem,
     TokenResponse,
 )
 from client_portal.security import ClientJWTAuth, ClientTokenService
-from client_portal.services import ClientPortalAuthService, ClientReservationQueryService
+from client_portal.services import (
+    ClientPortalAuthService,
+    ClientReservationCreateService,
+    ClientReservationQueryService,
+)
 from shared.errors import AppError
 
 api = NinjaAPI(title="Assessment Client API", version="1.0.0")
@@ -80,6 +85,31 @@ def list_reservations(request):
         )
         for reservation in reservations
     ]
+
+
+@reservation_router.post(
+    "/",
+    response={200: ReservationListItem, 400: ProblemDetailSchema},
+    auth=client_auth,
+)
+def create_reservation(request, payload: ReservationCreateRequest):
+    reservation = ClientReservationCreateService().create_reservation(
+        customer=request.auth,
+        room_id=payload.room_id,
+        starts_at=payload.starts_at,
+        ends_at=payload.ends_at,
+    )
+    return Status(
+        200,
+        ReservationListItem(
+            id=reservation.id,
+            room_name=reservation.room.name,
+            status=reservation.status,
+            starts_at=reservation.starts_at,
+            ends_at=reservation.ends_at,
+            cancel_reason=reservation.cancel_reason or None,
+        ),
+    )
 
 
 api.add_router("/auth/", auth_router)

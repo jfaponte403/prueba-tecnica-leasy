@@ -14,3 +14,13 @@ class ReservationNotFoundError(ReservationError):
 class ReservationStatusTransitionError(ReservationError):
     code = "reservation_invalid_transition"
     detail = "Reservation cannot transition from its current status."
+
+
+class RoomNotFoundError(ReservationError):
+    code = "room_not_found"
+    detail = "Room not found."
+
+
+class InvalidReservationPeriodError(ReservationError):
+    code = "reservation_invalid_period"
+    detail = "Reservation end must be after its start."

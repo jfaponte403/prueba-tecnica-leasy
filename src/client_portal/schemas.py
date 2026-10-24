@@ -60,3 +60,9 @@ class ReservationListItem(BaseModel):
     starts_at: datetime
     ends_at: datetime
     cancel_reason: str | None = None
+
+
+class ReservationCreateRequest(BaseModel):
+    room_id: UUID
+    starts_at: datetime
+    ends_at: datetime
