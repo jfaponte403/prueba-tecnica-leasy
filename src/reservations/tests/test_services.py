@@ -1,7 +1,18 @@
+from uuid import uuid4
+
 import pytest
 
-from reservations.constants import RESERVATION_STATUS_CANCELLED, RESERVATION_STATUS_CONFIRMED
-from reservations.exceptions import ReservationStatusTransitionError
+from reservations.constants import (
+    RESERVATION_STATUS_CANCELLED,
+    RESERVATION_STATUS_CONFIRMED,
+    RESERVATION_STATUS_ON_HOLD,
+    RESERVATION_STATUS_REQUESTED,
+)
+from reservations.exceptions import (
+    HoldReasonRequiredError,
+    ReservationNotFoundError,
+    ReservationStatusTransitionError,
+)
 from reservations.services import ReservationLifecycleService
 from reservations.tests.factories import ReservationFactory
 
@@ -40,3 +51,33 @@ def test_cancel_reservation_rejects_already_cancelled():
 
     with pytest.raises(ReservationStatusTransitionError):
         ReservationLifecycleService().cancel_reservation(reservation_id=reservation.id)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "status", [RESERVATION_STATUS_REQUESTED, RESERVATION_STATUS_CONFIRMED]
+)
+def test_hold_reservation_moves_to_on_hold_with_reason(status):
+    reservation = ReservationFactory(status=status)
+
+    ReservationLifecycleService().hold_reservation(
+        reservation_id=reservation.id, reason="  Pendiente de pago  "
+    )
+
+    reservation.refresh_from_db()
+    assert reservation.status == RESERVATION_STATUS_ON_HOLD
+    assert reservation.hold_reason == "Pendiente de pago"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("reason", ["", "   "])
+def test_hold_reservation_requires_reason(reason):
+    reservation = ReservationFactory(status=RESERVATION_STATUS_REQUESTED)
+
+    with pytest.raises(HoldReasonRequiredError):
+        ReservationLifecycleService().hold_reservation(
+            reservation_id=reservation.id, reason=reason
+        )
+
+    reservation.refresh_from_db()
+    assert reservation.status == RESERVATION_STATUS_REQUESTED

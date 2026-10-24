@@ -8,7 +8,6 @@
             <div class="topbar" style="margin-bottom:16px;">
                 <div>
                     <h2 style="margin:0;">Detalle de reserva</h2>
-                    <!-- Aquí el candidato agregará el flujo de ON_HOLD.-->
                 </div>
                 <div class="actions">
                     <a class="btn" href="{% url 'reservation_list' %}">Volver</a>
@@ -47,24 +46,117 @@
                     <strong>Motivo de cancelación</strong>
                     <span>{{ reservation.cancel_reason|default:"-" }}</span>
                 </div>
+                <div class="field">
+                    <strong>Motivo de espera</strong>
+                    <span>{{ reservation.hold_reason|default:"-" }}</span>
+                </div>
             </div>
         </div>
 
-        {% if can_change and reservation.status == "requested" %}
+        {% if can_change and reservation.status == "requested" or can_hold %}
             <div class="card">
                 <h3 style="margin-top:0;">Acciones rápidas</h3>
                 <div class="actions">
-                    <form method="post" action="{% url 'reservation_confirm' reservation.id %}">
-                        {% csrf_token %}
-                        <button class="btn btn-primary" type="submit">Confirmar reserva</button>
-                    </form>
-                    <form method="post" action="{% url 'reservation_cancel' reservation.id %}">
-                        {% csrf_token %}
-                        <button class="btn" type="submit">Cancelar</button>
-                    </form>
-                    <button class="btn" type="button">En espera</button>
+                    {% if can_change and reservation.status == "requested" %}
+                        <form method="post" action="{% url 'reservation_confirm' reservation.id %}">
+                            {% csrf_token %}
+                            <button class="btn btn-primary" type="submit">Confirmar reserva</button>
+                        </form>
+                        <form method="post" action="{% url 'reservation_cancel' reservation.id %}">
+                            {% csrf_token %}
+                            <button class="btn" type="submit">Cancelar</button>
+                        </form>
+                    {% endif %}
+                    {% if can_hold %}
+                        <button class="btn" type="button" data-open-dialog="on-hold-dialog">En espera</button>
+                    {% endif %}
                 </div>
             </div>
+        {% endif %}
+
+        {% if can_hold %}
+            <dialog class="modal card" id="on-hold-dialog" aria-labelledby="on-hold-dialog-title">
+                <form class="stack" method="post" action="{% url 'reservation_hold' reservation.id %}">
+                    {% csrf_token %}
+                    <h3 id="on-hold-dialog-title" style="margin:0;">Poner reserva en espera</h3>
+                    <div class="field" data-required-field>
+                        <label for="on-hold-reason"><strong>Motivo</strong></label>
+                        <textarea id="on-hold-reason" name="reason" rows="4" placeholder="Describe el motivo por el que la reserva queda en espera" aria-describedby="on-hold-reason-error" required></textarea>
+                        <span class="field__error" id="on-hold-reason-error" hidden>Debes agregar el motivo.</span>
+                    </div>
+                    <div class="actions modal__actions">
+                        <button class="btn" type="button" data-close-dialog>Cancelar</button>
+                        <button class="btn btn-primary" type="submit">Poner en espera</button>
+                    </div>
+                </form>
+            </dialog>
+
+            <style>
+                .modal {
+                    width: min(480px, calc(100vw - 32px));
+                    padding: 24px;
+                    color: var(--text);
+                }
+                .modal::backdrop {
+                    background: rgba(24, 33, 47, 0.45);
+                }
+                .modal__actions {
+                    justify-content: flex-end;
+                }
+                .field.has-error textarea {
+                    border-color: var(--danger);
+                    outline-color: rgba(159, 58, 50, 0.15);
+                }
+                .field__error {
+                    color: var(--danger);
+                    font-size: 13px;
+                }
+            </style>
+
+            <script>
+                const setFieldError = (field, hasError) => {
+                    field.classList.toggle("has-error", hasError);
+                    field.querySelector("textarea").setAttribute("aria-invalid", String(hasError));
+                    field.querySelector(".field__error").hidden = !hasError;
+                };
+
+                document.querySelectorAll("[data-open-dialog]").forEach((trigger) => {
+                    const dialog = document.getElementById(trigger.dataset.openDialog);
+                    const form = dialog.querySelector("form");
+                    const requiredFields = form.querySelectorAll("[data-required-field]");
+
+                    trigger.addEventListener("click", () => dialog.showModal());
+                    dialog.querySelectorAll("[data-close-dialog]").forEach((closer) => {
+                        closer.addEventListener("click", () => dialog.close());
+                    });
+                    dialog.addEventListener("close", () => {
+                        form.reset();
+                        requiredFields.forEach((field) => setFieldError(field, false));
+                    });
+
+                    form.noValidate = true;
+                    form.addEventListener("submit", (event) => {
+                        let firstInvalid = null;
+                        requiredFields.forEach((field) => {
+                            const input = field.querySelector("textarea");
+                            const isEmpty = input.value.trim() === "";
+                            setFieldError(field, isEmpty);
+                            if (isEmpty && !firstInvalid) {
+                                firstInvalid = input;
+                            }
+                        });
+                        if (firstInvalid) {
+                            event.preventDefault();
+                            firstInvalid.focus();
+                        }
+                    });
+                    requiredFields.forEach((field) => {
+                        field.querySelector("textarea").addEventListener("input", () => {
+                            setFieldError(field, false);
+                        });
+                    });
+                });
+            </script>
         {% endif %}
     </div>
 {% endblock %}

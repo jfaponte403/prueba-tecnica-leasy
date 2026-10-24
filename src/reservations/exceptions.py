@@ -29,3 +29,8 @@ class InvalidReservationPeriodError(ReservationError):
 class CancelReasonRequiredError(ReservationError):
     code = "reservation_cancel_reason_required"
     detail = "A cancellation reason is required."
+
+
+class HoldReasonRequiredError(ReservationError):
+    code = "reservation_hold_reason_required"
+    detail = "A hold reason is required."

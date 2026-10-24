@@ -6,7 +6,11 @@ from django.db import transaction
 from django.db.models import QuerySet
 
 from client_portal.exceptions import InvalidCredentialsError
-from reservations.constants import CLIENT_CANCELLABLE_STATUSES, RESERVATION_STATUS_CANCELLED
+from reservations.constants import (
+    CLIENT_CANCELLABLE_STATUSES,
+    RESERVATION_STATUS_CANCELLED,
+    RESERVATION_STATUS_REQUESTED,
+)
 from reservations.exceptions import (
     CancelReasonRequiredError,
     InvalidReservationPeriodError,
@@ -62,6 +66,7 @@ class ClientReservationCreateService:
             room=room,
             starts_at=starts_at,
             ends_at=ends_at,
+            status=RESERVATION_STATUS_REQUESTED,
         )
 
 

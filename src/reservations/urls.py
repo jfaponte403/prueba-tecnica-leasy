@@ -4,6 +4,7 @@ from reservations.views import (
     ReservationCancelView,
     ReservationConfirmView,
     ReservationDetailView,
+    ReservationHoldView,
     ReservationListView,
     ReservationUpdateView,
 )
@@ -21,5 +22,10 @@ urlpatterns = [
         "<uuid:pk>/cancel/",
         ReservationCancelView.as_view(),
         name="reservation_cancel",
+    ),
+    path(
+        "<uuid:pk>/hold/",
+        ReservationHoldView.as_view(),
+        name="reservation_hold",
     ),
 ]
