@@ -1,9 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { clearToken, getToken } from '../auth/token.ts'
+import { useCurrentUser } from '../hooks/useCurrentUser.ts'
 
 function AppHeader() {
   const navigate = useNavigate()
-  const isAuthenticated = Boolean(getToken())
+  const token = getToken()
+  const isAuthenticated = Boolean(token)
+  const { user } = useCurrentUser(token)
 
   const handleLogout = () => {
     clearToken()
@@ -23,6 +26,11 @@ function AppHeader() {
 
         {isAuthenticated && (
           <div className="header-actions">
+            {user && (
+              <span className="user-chip" title={user.email}>
+                {user.display_name || user.email}
+              </span>
+            )}
             <button className="btn" type="button" onClick={handleLogout}>
               Cerrar sesión
             </button>
