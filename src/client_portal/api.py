@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from ninja import NinjaAPI, Router
 from ninja.responses import Status
 
@@ -7,6 +9,7 @@ from client_portal.schemas import (
     ClientProfileSchema,
     LoginRequest,
     ProblemDetailSchema,
+    ReservationCancelRequest,
     ReservationCreateRequest,
     ReservationListItem,
     RoomListItem,
@@ -15,6 +18,7 @@ from client_portal.schemas import (
 from client_portal.security import ClientJWTAuth, ClientTokenService
 from client_portal.services import (
     ClientPortalAuthService,
+    ClientReservationCancelService,
     ClientReservationCreateService,
     ClientReservationQueryService,
     ClientRoomQueryService,
@@ -101,6 +105,30 @@ def create_reservation(request, payload: ReservationCreateRequest):
         room_id=payload.room_id,
         starts_at=payload.starts_at,
         ends_at=payload.ends_at,
+    )
+    return Status(
+        200,
+        ReservationListItem(
+            id=reservation.id,
+            room_name=reservation.room.name,
+            status=reservation.status,
+            starts_at=reservation.starts_at,
+            ends_at=reservation.ends_at,
+            cancel_reason=reservation.cancel_reason or None,
+        ),
+    )
+
+
+@reservation_router.post(
+    "/{reservation_id}/cancel",
+    response={200: ReservationListItem, 400: ProblemDetailSchema},
+    auth=client_auth,
+)
+def cancel_reservation(request, reservation_id: UUID, payload: ReservationCancelRequest):
+    reservation = ClientReservationCancelService().cancel_reservation(
+        customer=request.auth,
+        reservation_id=reservation_id,
+        reason=payload.reason,
     )
     return Status(
         200,

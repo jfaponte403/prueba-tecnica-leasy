@@ -73,3 +73,7 @@ class ReservationCreateRequest(BaseModel):
     room_id: UUID
     starts_at: datetime
     ends_at: datetime
+
+
+class ReservationCancelRequest(BaseModel):
+    reason: str = Field(..., max_length=1000)

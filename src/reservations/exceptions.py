@@ -24,3 +24,8 @@ class RoomNotFoundError(ReservationError):
 class InvalidReservationPeriodError(ReservationError):
     code = "reservation_invalid_period"
     detail = "Reservation end must be after its start."
+
+
+class CancelReasonRequiredError(ReservationError):
+    code = "reservation_cancel_reason_required"
+    detail = "A cancellation reason is required."

@@ -6,7 +6,14 @@ from django.db import transaction
 from django.db.models import QuerySet
 
 from client_portal.exceptions import InvalidCredentialsError
-from reservations.exceptions import InvalidReservationPeriodError, RoomNotFoundError
+from reservations.constants import CLIENT_CANCELLABLE_STATUSES, RESERVATION_STATUS_CANCELLED
+from reservations.exceptions import (
+    CancelReasonRequiredError,
+    InvalidReservationPeriodError,
+    ReservationNotFoundError,
+    ReservationStatusTransitionError,
+    RoomNotFoundError,
+)
 from reservations.models import Customer, Reservation, Room
 
 
@@ -56,3 +63,34 @@ class ClientReservationCreateService:
             starts_at=starts_at,
             ends_at=ends_at,
         )
+
+
+class ClientReservationCancelService:
+    @transaction.atomic
+    def cancel_reservation(
+        self,
+        *,
+        customer: Customer,
+        reservation_id,
+        reason: str,
+    ) -> Reservation:
+        reason = reason.strip()
+        if not reason:
+            raise CancelReasonRequiredError()
+
+        reservation = (
+            Reservation.objects.select_for_update()
+            .select_related("room")
+            .filter(pk=reservation_id, customer=customer)
+            .first()
+        )
+        if reservation is None:
+            raise ReservationNotFoundError()
+
+        if reservation.status not in CLIENT_CANCELLABLE_STATUSES:
+            raise ReservationStatusTransitionError()
+
+        reservation.status = RESERVATION_STATUS_CANCELLED
+        reservation.cancel_reason = reason
+        reservation.save(update_fields=["status", "cancel_reason", "updated_at"])
+        return reservation
